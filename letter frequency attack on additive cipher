@@ -1,0 +1,86 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#define ALPHABET_SIZE 26
+#define MAX_CIPHERTEXT_LEN 1000
+
+double english_freq[ALPHABET_SIZE] = {
+    12.70, 9.06, 6.28, 6.06, 12.02, 2.76, 4.25, 2.02, 6.09, 0.15,
+    0.77, 4.03, 2.41, 6.75, 7.51, 2.49, 6.28, 6.71, 9.06, 6.11,
+    6.94, 2.51, 0.90, 2.51, 0.23, 1.91, 0.7, 0.75
+};
+
+void calculate_frequency(const char* text, int* freq) {
+    for (int i = 0; text[i] != '\0'; i++) {
+        char c = tolower(text[i]);
+        if (c >= 'a' && c <= 'z') {
+            freq[c - 'a']++;
+        }
+    }
+}
+char shift_char(char c, int shift) {
+    if (c >= 'a' && c <= 'z') {
+        return (char)((c - 'a' + shift) % ALPHABET_SIZE + 'a');
+    }
+    return c;  
+}
+void decrypt(const char* ciphertext, int shift, char* plaintext) {
+    for (int i = 0; ciphertext[i] != '\0'; i++) {
+        plaintext[i] = shift_char(ciphertext[i], shift);
+    }
+    plaintext[strlen(ciphertext)] = '\0';  
+}
+double calculate_likelihood(int* freq) {
+    double score = 0;
+    for (int i = 0; i < ALPHABET_SIZE; i++) {
+        score += freq[i] * english_freq[i];
+    }
+    return score;
+}
+
+void frequency_attack(const char* ciphertext, int top_n) {
+    int freq[ALPHABET_SIZE] = {0};
+    calculate_frequency(ciphertext, freq);
+
+    double scores[ALPHABET_SIZE];
+    char possible_plaintexts[ALPHABET_SIZE][MAX_CIPHERTEXT_LEN];
+
+    for (int shift = 0; shift < ALPHABET_SIZE; shift++) {
+        char decrypted_text[MAX_CIPHERTEXT_LEN];
+        decrypt(ciphertext, shift, decrypted_text);
+\
+        scores[shift] = calculate_likelihood(freq);
+]
+        strcpy(possible_plaintexts[shift], decrypted_text);
+    }
+
+    for (int i = 0; i < ALPHABET_SIZE - 1; i++) {
+        for (int j = i + 1; j < ALPHABET_SIZE; j++) {
+            if (scores[i] < scores[j]) {
+                double temp_score = scores[i];
+                scores[i] = scores[j];
+                scores[j] = temp_score;
+
+                char temp_text[MAX_CIPHERTEXT_LEN];
+                strcpy(temp_text, possible_plaintexts[i]);
+                strcpy(possible_plaintexts[i], possible_plaintexts[j]);
+                strcpy(possible_plaintexts[j], temp_text);
+            }
+        }
+    }
+    printf("Top %d possible plaintexts based on likelihood:\n", top_n);
+    for (int i = 0; i < top_n && i < ALPHABET_SIZE; i++) {
+        printf("Shift %d: %s\n", i, possible_plaintexts[i]);
+    }
+}
+
+int main() {
+    char ciphertext[] = "yvjn qtfj hfsd";  
+    int top_n = 3;  
+
+    printf("Ciphertext: %s\n", ciphertext);
+    frequency_attack(ciphertext, top_n);
+
+    return 0;
+}
